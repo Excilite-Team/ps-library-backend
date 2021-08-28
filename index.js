@@ -41,14 +41,22 @@ const book_scheme = yup.object().shape({
     isAvailable: yup.bool().default(() => { return true }),
 })
 
-app.get("/api/users/", async (req, res) => {
+app.get("/api/users", async (req, res) => {
     let allUsers = await users.find();
     res.json(users);
 })
 
-app.get("/api/books/", async (req, res) => {
-    let allBooks = await books.find();
-    res.json(allBooks);
+app.get("/api/books", async (req, res) => {
+    let genre = req.query.genre;
+    let author = req.query.author;
+    let name = req.query.name;
+
+    let searchQuery = {};
+    if (genre) searchQuery["genre"] = genre;
+    if (author) searchQuery["author"] = {"$regex": author, "$options": "i"};
+    if (name) searchQuery["name"] = {"$regex": name, "$options": "i"};
+    let resdict =  await books.find(searchQuery);
+    res.json(resdict);
 })
 
 app.get("/api/users/:id", async (req, res) => {
