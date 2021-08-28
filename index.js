@@ -25,6 +25,7 @@ const book_genres = [
     "romance",
     "comedy",
     "classical",
+    "detective",
 ]
 
 const user_scheme = yup.object().shape({
@@ -35,7 +36,7 @@ const user_scheme = yup.object().shape({
 const book_scheme = yup.object().shape({
     name: yup.string().required(),
     author: yup.string().required(),
-    genre: yup.mixed().oneOf(book_genres),  
+    genre: yup.mixed().required().oneOf(book_genres),  
     isAvailable: yup.bool().default(() => { return true }),
 })
 
