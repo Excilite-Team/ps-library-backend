@@ -1,10 +1,15 @@
+require('dotenv').config();
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 const helmet = require('helmet');
 const yup = require('yup');
-const monk = require('monk');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const { nanoid } = require('nanoid');
+const auth = require('./middlewares/auth');
+const isAdmin = require('./middlewares/isAdmin')
+const { users, books } = require('./db');
 
 const app = express();
 
@@ -12,12 +17,6 @@ app.use(helmet());
 app.use(morgan('tiny'));
 app.use(cors());
 app.use(express.json());
-
-require('dotenv').config();
-
-const db = monk(process.env.MONGO_URI);
-const users = db.get("users");
-const books = db.get("books");
 
 const book_genres = [
     "adventure",
@@ -29,21 +28,22 @@ const book_genres = [
 ]
 
 const user_scheme = yup.object().shape({
-    name: yup.string().required().matches(/[\w\-]/i),
-    password: yup.string().required().matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/),
+    name: yup.string().required(),
+    email: yup.string().required().matches(/(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])/),
+    password: yup.string().required(),
 })
 
 const book_scheme = yup.object().shape({
     name: yup.string().required(),
     author: yup.string().required(),
     image: yup.string().required(),
-    genre: yup.mixed().required().oneOf(book_genres),  
+    genre: yup.mixed().required().oneOf(book_genres),
     isAvailable: yup.bool().default(() => { return true }),
 })
 
-app.get("/api/users", async (req, res) => {
+app.get("/api/users", auth, isAdmin, async (req, res) => {
     let allUsers = await users.find();
-    res.json(users);
+    res.json(allUsers);
 })
 
 app.get("/api/books", async (req, res) => {
@@ -53,26 +53,43 @@ app.get("/api/books", async (req, res) => {
 
     let searchQuery = {};
     if (genre) searchQuery["genre"] = genre;
-    if (author) searchQuery["author"] = {"$regex": author, "$options": "i"};
-    if (name) searchQuery["name"] = {"$regex": name, "$options": "i"};
-    let resdict =  await books.find(searchQuery);
+    if (author) searchQuery["author"] = { "$regex": author, "$options": "i" };
+    if (name) searchQuery["name"] = { "$regex": name, "$options": "i" };
+    let resdict = await books.find(searchQuery);
     res.json(resdict);
 })
 
-app.get("/api/users/:id", async (req, res) => {
+app.get('/api/genres', async (req, res) => {
+    return res.json(book_genres);
+})
+
+app.get("/api/users/:id", auth, isAdmin, async (req, res) => {
     let userid = req.params.id;
-    let user = await users.findOne({userID: userid});
+    let user = await users.findOne({ userID: userid });
     res.json(user);
 })
 
 app.get("/api/books/:id", async (req, res) => {
     let bookid = req.params.id;
-    let book = await books.findOne({bookID: bookid});
+    let book = await books.findOne({ bookID: bookid });
     if (!book) res.status(500)
     else res.json(book);
 })
 
-app.post("/api/books/new/", async (req, res, next) => {
+app.put('/api/users/:id', auth, isAdmin, async (req, res) => {
+    let userid = req.params.id;
+    let user = await users.findOneAndUpdate({ userID: userid }, {
+        $set: {
+            isAdmin: true
+        }
+    });
+    if (!user) {
+        return res.status(404).send('Not found');
+    }
+    return res.status(200).json(user);
+});
+
+app.post("/api/books/new/", auth, isAdmin, async (req, res, next) => {
     let { author, genre, name, image, isAvailable } = req.body;
     if (typeof isAvailable !== 'boolean') isAvailable = true;
     try {
@@ -84,10 +101,10 @@ app.post("/api/books/new/", async (req, res, next) => {
             isAvailable
         })
 
-        let now = new Date();   
+        let now = new Date();
         let bookid = nanoid(5);
-        let exists = await books.findOne({bookID: bookid});
-        if (exists) bookid = nanoid(5) 
+        let exists = await books.findOne({ bookID: bookid });
+        if (exists) bookid = nanoid(5)
 
         const created = await books.insert({
             bookID: bookid.toLowerCase(),
@@ -98,7 +115,7 @@ app.post("/api/books/new/", async (req, res, next) => {
             isAvailable: isAvailable,
             dateCreated: now
         })
-        
+
         res.json(created)
 
     } catch (e) {
@@ -106,17 +123,74 @@ app.post("/api/books/new/", async (req, res, next) => {
     }
 })
 
-app.use( (error, req, res, next) => {
+app.post('/api/users/register', async (req, res, next) => {
+    let { name, email, password } = req.body;
+    try {
+        let user = await users.findOne({ email });
+        if (user) {
+            return res.status(400).send('Email is already in use');
+        }
+        let hashedPassword = await bcrypt.hash(password, 10);
+        await user_scheme.validate({
+            name,
+            email,
+            password: hashedPassword
+        })
+        let userid = nanoid(7);
+        let exists = await users.findOne({ userID: userid });
+        if (exists) userid = nanoid(7);
+
+        const created = await users.insert({
+            userID: userid.toLowerCase(),
+            name,
+            email,
+            password: hashedPassword,
+            isAdmin: false
+        })
+
+        return res.status(201).json(created);
+    } catch (e) {
+        next(e);
+    }
+})
+
+app.post('/api/users/login', async (req, res, next) => {
+    let { email, password } = req.body;
+    try {
+        let user = await users.findOne({ email });
+        if (!user) {
+            return res.status(404).send('Unable to find that user');
+        }
+        let isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+            return res.status(400).send('Email or password is incorrect');
+        };
+        let secret = process.env.JWT_SECRET;
+        if (!secret) {
+            throw new Error('JWT_SECRET env variable is required');
+        }
+        let token = jwt.sign({
+            email: user.email,
+            userID: user.userID
+        }, secret, { expiresIn: '7d' });
+        res.status(200).send(token);
+
+    } catch (e) {
+        next(e);
+    }
+});
+
+app.use((error, req, res, next) => {
     if (error.status) res.status(error.status)
     else res.status(500)
 
     res.json({
         message: req.message,
-        stack: process.env.NODE_ENV === 'production' 
+        stack: process.env.NODE_ENV === 'production'
             ? "Production Environment prevents you from viewing the error stack, change it to view"
             : error.stack
-     })
-} )
+    })
+})
 
 const port = process.env.PORT || 3000
 
