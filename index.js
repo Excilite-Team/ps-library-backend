@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const { nanoid } = require('nanoid');
 const auth = require('./middlewares/auth');
 const isAdmin = require('./middlewares/isAdmin')
-const { users, books } = require('./db');
+const { users, books, orders } = require('./db');
 
 const app = express();
 
@@ -39,6 +39,84 @@ const book_scheme = yup.object().shape({
     image: yup.string().required(),
     genre: yup.mixed().required().oneOf(book_genres),
     isAvailable: yup.bool().default(() => { return true }),
+})
+
+const order_scheme = yup.object().shape({
+    userId: yup.string().required(),
+    bookId: yup.string().required(),
+    isCancelled: yup.bool().default(false),
+    isAccepted: yup.bool().default(false),
+    until: yup.date().default(new Date(Date.now() + 1000 * 60 * 60 * 24 * 7))
+})
+
+app.post('/api/orders/new', auth, async (req, res, next) => {
+    let user = req.user;
+    let { bookId, until = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) } = req.body;
+    try {
+        let book = await books.findOne({ bookID: bookId });
+        if (!book) {
+            return res.status(404).send('Not found');
+        }
+        let order = {
+            userId: user.userID,
+            bookId: book.bookID,
+            isCancelled: false,
+            isAccepted: false,
+            until
+        };
+        await order_scheme.validate(order);
+        let created = await orders.insert(order);
+        return res.status(201).json(created);
+    } catch (e) {
+        next(e);
+    }
+})
+
+app.get('/api/orders/my', auth, async (req, res) => {
+    let user = req.user;
+    let result = await orders.find({ userId: user.userID });
+    res.json(result);
+})
+
+app.get('/api/orders', auth, isAdmin, async (req, res) => {
+    let { limit = 20, skip = 0 } = req.query;
+    let result = await orders.find({}, {
+        skip: parseInt(skip),
+        limit: parseInt(limit)
+    });
+    res.json(result);
+})
+
+app.put('/api/orders/:id/cancel', auth, async (req,res) => {
+    
+    let result = await orders.findOneAndUpdate({ _id: req.params.id, isAccepted: false }, {
+        $set: {
+            isCancelled: true
+        }
+    });
+    res.json(result);
+})
+
+app.put('/api/orders/:id/accept', auth, isAdmin, async (req,res) => {
+    let result = await orders.findOneAndUpdate({ _id: req.params.id, isCancelled: false }, {
+        $set: {
+            isAccepted: true
+        }
+    });
+    if (!result) {
+        return res.status(404).send('Order might be cancelled');
+    }
+    await books.findOneAndUpdate({ bookID: result.bookId }, {
+        $set: {
+            isAvailable: false
+        }
+    })
+    return res.json(result);
+});
+
+app.delete('/api/orders/:id/complete', auth, isAdmin, async (req,res) => {
+    let result = await orders.remove({ _id: req.params.id });
+    return res.status(200).json(result?.result);
 })
 
 app.get("/api/users", auth, isAdmin, async (req, res) => {
