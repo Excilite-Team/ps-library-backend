@@ -72,7 +72,7 @@ app.post("/api/books/new/", async (req, res, next) => {
             isAvailable
         })
 
-        let now = new Date();
+        let now = new Date();   
         let bookid = nanoid(5);
         let exists = await books.findOne({bookID: bookid});
         if (exists) bookid = nanoid(5) 
