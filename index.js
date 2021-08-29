@@ -104,20 +104,26 @@ app.put('/api/orders/:id/accept', auth, isAdmin, async (req,res) => {
             isAccepted: true
         }
     });
+    
     if (!result) {
         return res.status(404).send('Order might be cancelled');
     }
+    
     await books.findOneAndUpdate({ bookID: result.bookId }, {
         $set: {
             isAvailable: false
         }
     })
-    /* email({
-        to: user email
-        subject: "Your order is accepted!"
-        content: "... "
-        html: "<b>Congrats! Your order was accepted by administrators!</b>"
-    }) */
+    
+    const user = await users.findOne({ userID: result.userId });
+    
+    email({
+        to: user.email,
+        subject: "Your order is accepted!",
+        content: `Dear ${user.name}, your order request was accepted and approved by administrator(s)`,
+        html: `<i>This email is a computed controlled noreply email, so please, don't respond to mails from this account</i>`
+    })
+    
     return res.json(result);
 });
 
