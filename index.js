@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const { nanoid } = require('nanoid');
 const auth = require('./middlewares/auth');
 const isAdmin = require('./middlewares/isAdmin')
+const email = require('./mailer');
 const { users, books, orders } = require('./db');
 
 const app = express();
