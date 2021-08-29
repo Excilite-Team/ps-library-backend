@@ -40,7 +40,7 @@ const book_scheme = yup.object().shape({
     author: yup.string().required(),
     image: yup.string().required(),
     genre: yup.mixed().required().oneOf(book_genres),
-    isAvailable: yup.bool().default(() => { return true }),
+    isAvailable: yup.bool().default(true),
 })
 
 const order_scheme = yup.object().shape({
