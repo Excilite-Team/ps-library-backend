@@ -95,6 +95,14 @@ app.put('/api/orders/:id/cancel', auth, async (req,res) => {
             isCancelled: true
         }
     });
+    const user = await users.findOne({ userID: result.userId });
+    
+    email({
+        to: user.email,
+        subject: "So'rovingiz qabul qilinmadi!",
+        content: `Hurmatli ${user.name}, afsuski sizning so'rovingiz qabul qilinmadi!`,
+        html: `<i>Bu email akkaunt komputer tomonidan boshqariladi. Iltimos, bu emailga javob qaytarmang.</i>`
+    })
     res.json(result);
 })
 
