@@ -20,7 +20,7 @@ app.use(cors());
 app.use(express.json());
 
 const book_genres = [
-    "sayohat",
+    "sarguzasht",
     "fantastika",
     "romantika",
     "komediya",
