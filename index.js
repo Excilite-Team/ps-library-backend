@@ -112,8 +112,18 @@ app.put('/api/orders/:id/accept', auth, isAdmin, async (req,res) => {
             isAvailable: false
         }
     })
+    /* email({
+        to: user email
+        subject: "Your order is accepted!"
+        content: "... "
+        html: "<b>Congrats! Your order was accepted by administrators!</b>"
+    }) */
     return res.json(result);
 });
+
+app.get('/api/auth', auth, async (req,res) => {
+    res.status(200).send(req.user);
+})
 
 app.delete('/api/orders/:id/complete', auth, isAdmin, async (req,res) => {
     let result = await orders.remove({ _id: req.params.id });
