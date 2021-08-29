@@ -30,7 +30,8 @@ const book_genres = [
     "roman",
     "biografiya",
     "avtobiografiya",
-    "falsafa"
+    "falsafa",
+    "shaxsiy-rivojlanish"
 ]
 
 const user_scheme = yup.object().shape({
