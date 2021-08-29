@@ -20,12 +20,13 @@ app.use(cors());
 app.use(express.json());
 
 const book_genres = [
-    "adventure",
-    "sci-fi",
-    "romance",
-    "comedy",
-    "classical",
-    "detective",
+    "sayohat",
+    "fantastik",
+    "romantik",
+    "komediya",
+    "klassik",
+    "biznes",
+    "detektiv"
 ]
 
 const user_scheme = yup.object().shape({
