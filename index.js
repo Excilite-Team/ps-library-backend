@@ -26,7 +26,11 @@ const book_genres = [
     "komediya",
     "klassika",
     "biznes",
-    "detektiv"
+    "detektiv",
+    "roman",
+    "biografiya",
+    "avtobiografiya",
+    "falsafa"
 ]
 
 const user_scheme = yup.object().shape({
