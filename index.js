@@ -119,9 +119,9 @@ app.put('/api/orders/:id/accept', auth, isAdmin, async (req,res) => {
     
     email({
         to: user.email,
-        subject: "Your order is accepted!",
-        content: `Dear ${user.name}, your order request was accepted and approved by administrator(s)`,
-        html: `<i>This email is a computed controlled noreply email, so please, don't respond to mails from this account</i>`
+        subject: "So'rovingiz qabul qilindi!",
+        content: `Hurmatli ${user.name}, sizning so'rovingiz administrator(lar) tomonidan ko'rib chiqildi va qabul qilindi!`,
+        html: `<i>Bu email akkaunt komputer tomonidan boshqariladi. Iltimos, bu emailga javob qaytarmang.</i>`
     })
     
     return res.json(result);
