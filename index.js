@@ -21,10 +21,10 @@ app.use(express.json());
 
 const book_genres = [
     "sayohat",
-    "fantastik",
-    "romantik",
+    "fantastika",
+    "romantika",
     "komediya",
-    "klassik",
+    "klassika",
     "biznes",
     "detektiv"
 ]
