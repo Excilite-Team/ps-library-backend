@@ -44,6 +44,7 @@ const book_scheme = yup.object().shape({
     name: yup.string().required(),
     author: yup.string().required(),
     image: yup.string().required(),
+    pdf: yup.string(),
     genre: yup.mixed().required().oneOf(book_genres),
     isAvailable: yup.bool().default(true),
 })
@@ -199,13 +200,14 @@ app.put('/api/users/:id', auth, isAdmin, async (req, res) => {
 });
 
 app.post("/api/books/new/", auth, isAdmin, async (req, res, next) => {
-    let { author, genre, name, image, isAvailable } = req.body;
+    let { author, genre, name, image, pdf, isAvailable } = req.body;
     if (typeof isAvailable !== 'boolean') isAvailable = true;
     try {
         await book_scheme.validate({
             name,
             author,
             image,
+            pdf,
             genre,
             isAvailable
         })
@@ -220,6 +222,7 @@ app.post("/api/books/new/", auth, isAdmin, async (req, res, next) => {
             name: name,
             author: author,
             image: image,
+            pdf: pdf,
             genre: genre,
             isAvailable: isAvailable,
             dateCreated: now
