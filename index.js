@@ -16,7 +16,7 @@ const app = express();
 
 app.use(helmet());
 app.use(morgan('tiny'));
-app.use(cors({ credentials: true }));
+app.use(cors({ origin: "*", credentials: true }));
 app.use(express.json());
 
 const book_genres = [
