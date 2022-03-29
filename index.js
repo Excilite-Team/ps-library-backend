@@ -34,6 +34,8 @@ const book_genres = [
     "shaxsiy-rivojlanish"
 ]
 
+const monstrous_URL_regex = /^((https?|ftp):\/\/)?(www.)?(((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?(((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?)(:\d*)?)(\/((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)?(\?((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(\#((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/i
+
 const user_scheme = yup.object().shape({
     name: yup.string().required(),
     email: yup.string().email().required(),
@@ -42,9 +44,13 @@ const user_scheme = yup.object().shape({
 
 const book_scheme = yup.object().shape({
     name: yup.string().required(),
+    nameUZ: yup.string().required(),
+    nameRU: yup.string().required(),
     author: yup.string().required(),
+    authorUZ: yup.string().required(),
+    authorRU: yup.string().required(),
     image: yup.string().required(),
-    pdf: yup.string(),
+    pdf: yup.string().matches(URL, 'The entered URL is not valid'),
     genre: yup.mixed().required().oneOf(book_genres),
     isAvailable: yup.bool().default(true),
 })
@@ -159,12 +165,20 @@ app.get("/api/users", auth, isAdmin, async (req, res) => {
 app.get("/api/books", async (req, res) => {
     let genre = req.query.genre;
     let author = req.query.author;
+    let authorRU = req.query.authorRU;
+    let authorUZ = req.query.authorUZ;
     let name = req.query.name;
+    let nameUZ = req.query.nameUZ;
+    let nameRU = req.query.nameRU;
 
     let searchQuery = {};
     if (genre) searchQuery["genre"] = genre;
     if (author) searchQuery["author"] = { "$regex": author, "$options": "i" };
+    if (authorUZ) searchQuery["authorUZ"] = { "$regex": authorUZ, "$options": "i" };
+    if (authorRU) searchQuery["authorRU"] = { "$regex": authorRU, "$options": "i" };
     if (name) searchQuery["name"] = { "$regex": name, "$options": "i" };
+    if (nameRU) searchQuery["nameRU"] = { "$regex": nameRU, "$options": "i" };
+    if (nameUZ) searchQuery["nameUZ"] = { "$regex": nameUZ, "$options": "i" };
     let resdict = await books.find(searchQuery);
     res.json(resdict);
 })
@@ -200,12 +214,16 @@ app.put('/api/users/:id', auth, isAdmin, async (req, res) => {
 });
 
 app.post("/api/books/new/", auth, isAdmin, async (req, res, next) => {
-    let { author, genre, name, image, pdf, isAvailable } = req.body;
+    let { author, authorUZ, authorRU, genre, name, nameUZ, nameRU, image, pdf, isAvailable } = req.body;
     if (typeof isAvailable !== 'boolean') isAvailable = true;
     try {
         await book_scheme.validate({
             name,
+            nameUZ,
+            nameRU,
             author,
+            authorUZ,
+            authorRU,
             image,
             pdf,
             genre,
@@ -220,7 +238,11 @@ app.post("/api/books/new/", auth, isAdmin, async (req, res, next) => {
         const created = await books.insert({
             bookID: bookid.toLowerCase(),
             name: name,
+            nameUZ: nameUZ,
+            nameRU: nameRU,
             author: author,
+            authorUZ: authorUZ,
+            authorRU: authorRU,
             image: image,
             pdf: pdf,
             genre: genre,
