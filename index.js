@@ -166,11 +166,11 @@ app.get("/api/users", auth, isAdmin, async (req, res) => {
 app.get("/api/books", async (req, res) => {
     let genre = req.query.genre;
     let author = req.query.author;
-    let authorRU = req.query.author;
-    let authorUZ = req.query.author;
+    let authorRU = req.query.authorRU;
+    let authorUZ = req.query.authorUZ;
     let name = req.query.name;
-    let nameUZ = req.query.name;
-    let nameRU = req.query.name;
+    let nameUZ = req.query.nameUZ;
+    let nameRU = req.query.nameRU;
 
     let searchQuery = {};
     if (genre) searchQuery["genre"] = genre;
