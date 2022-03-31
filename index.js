@@ -193,11 +193,11 @@ app.get("/api/books", async (req, res) => {
     if (nameUZ) {
         orQuery.push({nameUZ: { $regex: nameUZ, $options: 'i'}});
     }
+    if (orQuery.length > 0) {
+        andQuery.push({ $or: orQuery });
+    }
     let resdict = await books.find({
-        $and: [
-            { $or: orQuery },
-            ...andQuery
-        ]
+        $and: andQuery
     });
     res.json(resdict);
 })
