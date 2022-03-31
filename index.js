@@ -20,6 +20,7 @@ app.use(cors({ origin: "*", credentials: true }));
 app.use(express.json());
 
 const book_genres = [
+    "darslik",
     "sarguzasht",
     "fantastika",
     "romantika",
