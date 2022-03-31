@@ -53,6 +53,9 @@ const book_scheme = yup.object().shape({
     pdf: yup.string().matches(URL, 'The entered URL is not valid'),
     genre: yup.mixed().required().oneOf(book_genres),
     isAvailable: yup.bool().default(true),
+    description: yup.string(),
+    descriptionUZ: yup.string(),
+    descriptionRU: yup.string()
 })
 
 const order_scheme = yup.object().shape({
