@@ -171,16 +171,34 @@ app.get("/api/books", async (req, res) => {
     let name = req.query.name;
     let nameUZ = req.query.nameUZ;
     let nameRU = req.query.nameRU;
-
-    let searchQuery = {};
-    if (genre) searchQuery["genre"] = genre;
-    if (author) searchQuery["author"] = { "$regex": author, "$options": "i" };
-    if (authorUZ) searchQuery["authorUZ"] = { "$regex": authorUZ, "$options": "i" };
-    if (authorRU) searchQuery["authorRU"] = { "$regex": authorRU, "$options": "i" };
-    if (name) searchQuery["name"] = { "$regex": name, "$options": "i" };
-    if (nameRU) searchQuery["nameRU"] = { "$regex": nameRU, "$options": "i" };
-    if (nameUZ) searchQuery["nameUZ"] = { "$regex": nameUZ, "$options": "i" };
-    let resdict = await books.find(searchQuery);
+   
+    let andQuery = [];
+    let orQuery = [];
+    if (genre) andQuery.push({ genre });
+    if (author) {
+        orQuery.push({author: { $regex: author, $options: 'i'}});
+    }
+    if (authorRU) {
+        orQuery.push({authorRU: { $regex: authorRU, $options: 'i'}});
+    }
+    if (authorUZ) {
+        orQuery.push({authorUZ: { $regex: authorUZ, $options: 'i'}});
+    }
+    if (name) {
+        orQuery.push({name: { $regex: name, $options: 'i'}});
+    }
+    if (nameRU) {
+        orQuery.push({nameRU: { $regex: nameRU, $options: 'i'}});
+    }
+    if (nameUZ) {
+        orQuery.push({nameUZ: { $regex: nameUZ, $options: 'i'}});
+    }
+    let resdict = await books.find({
+        $and: [
+            { $or: orQuery },
+            ...andQuery
+        ]
+    });
     res.json(resdict);
 })
 
